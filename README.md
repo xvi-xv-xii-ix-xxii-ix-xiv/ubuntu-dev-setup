@@ -264,15 +264,43 @@ sudo reboot
 
 ---
 
-## 19. STM32 Development Tools
+## **19. STM32F4xx Development Tools Installation**
 
-```bash
-sudo apt update
-sudo apt install -y gcc-arm-none-eabi gdb-arm-none-eabi openocd gdb-multiarc
+1. **Install ARM toolchain and debug tools:**
 
-cargo install cargo-flash
-cargo install cargo-embed
-```
+   ```bash
+   sudo apt update
+   sudo apt install -y gcc-arm-none-eabi gdb-arm-none-eabi openocd gdb-multiarc
+   ```
+
+2. **Install `cargo-flash`:**
+
+   ```bash
+   cargo install cargo-flash
+   ```
+
+3. **Install `cargo-embed`:**
+
+   ```bash
+   cargo install cargo-embed
+   ```
+
+4. **Install ST-Link utilities:**
+
+   ```bash
+   sudo apt install -y stlink-tools
+   ```
+
+5. **Add your user to the `dialout` group for USB serial access:**
+
+   ```bash
+   sudo usermod -a -G dialout $USER
+   ```
+
+6. **(Optional)** Reboot the system to apply group changes:
+   ```bash
+   sudo reboot
+   ```
 
 ---
 
