@@ -21,18 +21,19 @@ It is aimed at **beginner developers**, and covers everything from OS installati
 9. [Node.js and Yarn Setup](#9-nodejs-and-yarn-setup)
 10. [PostgreSQL Server Setup](#10-postgresql-server-setup)
 11. [Neovim Configuration](#11-neovim-configuration)
-12. [Installing IDEs](#12-installing-ides)
-13. [Version Control Tools](#13-version-control-tools)
-14. [API Testing Tools](#14-api-testing-tools)
-15. [Wireshark Installation](#15-wireshark-installation)
-16. [pgAdmin Installation](#16-pgadmin-installation)
-17. [Docker and Docker Compose](#17-docker-and-docker-compose)
-18. [VirtualBox Installation](#18-virtualbox-installation)
-19. [STM32 Development Tools](#19-stm32-development-tools)
-20. [Leptos Setup](#20-leptos-setup)
-21. [Tauri Setup](#21-tauri-setup)
-22. [Removing UFW and iptables](#22-removing-ufw-and-iptables)
-23. [nftables Firewall Configuration](#23-nftables-firewall-configuration)
+12. [WezTerm Installation](#12-wezterm-installation)
+13. [Installing IDEs](#13-installing-ides)
+14. [Version Control Tools](#14-version-control-tools)
+15. [API Testing Tools](#15-api-testing-tools)
+16. [Wireshark Installation](#16-wireshark-installation)
+17. [pgAdmin Installation](#17-pgadmin-installation)
+18. [Docker and Docker Compose](#18-docker-and-docker-compose)
+19. [VirtualBox Installation](#19-virtualbox-installation)
+20. [STM32F4xx Development Tools](#20-stm32f4xx-development-tools)
+21. [Leptos Setup](#21-leptos-setup)
+22. [Tauri Setup](#22-tauri-setup)
+23. [Removing UFW and iptables](#23-removing-ufw-and-iptables)
+24. [nftables Firewall Configuration](#24-nftables-firewall-configuration)
 
 ---
 
@@ -150,6 +151,9 @@ sudo -u postgres psql -c "CREATE DATABASE mydb OWNER myuser;"
 
 ## 11. Neovim Configuration
 
+For a better and beginner-friendly setup, follow this guide:  
+👉 [How to Setup Neovim (2024) by Josean](https://www.josean.com/posts/how-to-setup-neovim-2024)
+
 ```bash
 sudo apt install -y neovim
 
@@ -171,7 +175,21 @@ EOF
 
 ---
 
-## 12. Installing IDEs
+## 12. WezTerm Installation
+
+```bash
+sudo apt install -y software-properties-common
+sudo add-apt-repository ppa:wez/ppa
+sudo apt update
+sudo apt install -y wezterm
+```
+
+More configuration tips:  
+👉 [Josean’s WezTerm Guide (macOS-focused, but similar)](https://www.josean.com/posts/how-to-setup-wezterm-terminal)
+
+---
+
+## 13. Installing IDEs
 
 ```bash
 sudo snap install --classic code
@@ -188,7 +206,7 @@ tar -xzf jetbrains-toolbox.tar.gz
 
 ---
 
-## 13. Version Control Tools
+## 14. Version Control Tools
 
 ```bash
 wget https://release.gitkraken.com/linux/gitkraken-amd64.deb
@@ -200,7 +218,7 @@ sudo apt install -y tig
 
 ---
 
-## 14. API Testing Tools
+## 15. API Testing Tools
 
 ```bash
 sudo snap install postman
@@ -209,7 +227,7 @@ sudo apt install -y httpie
 
 ---
 
-## 15. Wireshark Installation
+## 16. Wireshark Installation
 
 ```bash
 sudo apt install -y wireshark
@@ -217,7 +235,7 @@ sudo apt install -y wireshark
 
 ---
 
-## 16. pgAdmin Installation
+## 17. pgAdmin Installation
 
 ```bash
 curl -fsS https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo gpg --dearmor -o /usr/share/keyrings/packages-pgadmin-org.gpg
@@ -228,7 +246,7 @@ sudo apt install -y pgadmin4
 
 ---
 
-## 17. Docker and Docker Compose
+## 18. Docker and Docker Compose
 
 ```bash
 sudo apt update
@@ -244,7 +262,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 ---
 
-## 18. VirtualBox Installation
+## 19. VirtualBox Installation
 
 ```bash
 sudo apt install -y build-essential dkms linux-headers-$(uname -r)
@@ -264,47 +282,21 @@ sudo reboot
 
 ---
 
-## 19. STM32F4xx Development Tools Installation
+## 20. STM32F4xx Development Tools
 
-1. **Install ARM toolchain and debug tools:**
-
-   ```bash
-   sudo apt update
-   sudo apt install -y gcc-arm-none-eabi gdb-arm-none-eabi openocd gdb-multiarc
-   ```
-
-2. **Install `cargo-flash`:**
-
-   ```bash
-   cargo install cargo-flash
-   ```
-
-3. **Install `cargo-embed`:**
-
-   ```bash
-   cargo install cargo-embed
-   ```
-
-4. **Install ST-Link utilities:**
-
-   ```bash
-   sudo apt install -y stlink-tools
-   ```
-
-5. **Add your user to the `dialout` group for USB serial access:**
-
-   ```bash
-   sudo usermod -a -G dialout $USER
-   ```
-
-6. **(Optional)** Reboot the system to apply group changes:
-   ```bash
-   sudo reboot
-   ```
+```bash
+sudo apt update
+sudo apt install -y gcc-arm-none-eabi gdb-arm-none-eabi openocd gdb-multiarc
+sudo apt install -y qemu-system-arm
+cargo install cargo-flash
+cargo install cargo-embed
+sudo apt install -y stlink-tools
+sudo usermod -a -G dialout $USER
+```
 
 ---
 
-## 20. Leptos Setup
+## 21. Leptos Setup
 
 ```bash
 cargo install cargo-leptos
@@ -312,7 +304,7 @@ cargo install cargo-leptos
 
 ---
 
-## 21. Tauri Setup
+## 22. Tauri Setup
 
 ```bash
 npm install -g @tauri-apps/cli
@@ -320,7 +312,7 @@ npm install -g @tauri-apps/cli
 
 ---
 
-## 22. Removing UFW and iptables
+## 23. Removing UFW and iptables
 
 ```bash
 sudo ufw disable
@@ -333,7 +325,7 @@ sudo apt remove --purge iptables
 
 ---
 
-## 23. nftables Firewall Configuration
+## 24. nftables Firewall Configuration
 
 ```bash
 sudo apt update
