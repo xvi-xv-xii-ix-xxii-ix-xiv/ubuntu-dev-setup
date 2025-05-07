@@ -1,6 +1,10 @@
-# Ubuntu Developer Setup
+# 🐧 Ubuntu Developer Setup for Beginners
 
-📘 A comprehensive step-by-step guide to install and configure Ubuntu for development purposes. Suitable for fresh installs on personal laptops or desktops. Includes language toolchains, IDEs, Docker, virtualization, hardware tools (e.g. STM32), and much more.
+This is a step-by-step guide for setting up a fresh Ubuntu-based development environment from scratch.  
+It is aimed at **beginner developers**, and covers everything from OS installation and essential tools to language runtimes, IDEs, and developer utilities.
+
+✅ Suitable for Ubuntu 22.04 and 24.04  
+💡 Designed for software engineers, system programmers, and hobbyists starting with Linux development.
 
 ---
 
