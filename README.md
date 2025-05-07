@@ -264,7 +264,7 @@ sudo reboot
 
 ---
 
-## **19. STM32F4xx Development Tools Installation**
+## 19. STM32F4xx Development Tools Installation
 
 1. **Install ARM toolchain and debug tools:**
 
