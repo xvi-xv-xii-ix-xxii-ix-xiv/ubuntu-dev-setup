@@ -27,13 +27,14 @@ This guide provides a step-by-step process for setting up a comprehensive develo
 18. [Docker and Docker Compose](#docker-and-docker-compose)
 19. [VirtualBox Installation](#virtualbox-installation)
 20. [STM32F4xx Development Tools](#stm32f4xx-development-tools)
-21. [Leptos Setup](#leptos-setup)
-22. [Tauri Setup](#tauri-setup)
-23. [Removing UFW and iptables](#removing-ufw-and-iptables)
-24. [nftables Firewall Configuration](#nftables-firewall-configuration)
-25. [SSH Configuration](#ssh-configuration)
-26. [Generating SSH Keys](#generating-ssh-keys)
-27. [Additional Tools and Utilities](#additional-tools-and-utilities)
+21. [QEMU: QEMU Installation](#qemu-installation)
+22. [Leptos Setup](#leptos-setup)
+23. [Tauri Setup](#tauri-setup)
+24. [Removing UFW and iptables](#removing-ufw-and-iptables)
+25. [nftables Firewall Configuration](#nftables-firewall-configuration)
+26. [SSH Configuration](#ssh-configuration)
+27. [Generating SSH Keys](#generating-ssh-keys)
+28. [Additional Tools and Utilities](#additional-tools-and-utilities)
 
 ---
 
@@ -433,6 +434,17 @@ sudo usermod -a -G dialout $USER
 ```
 
 > **Comment**: Sets up tools for STM32F4 microcontroller development, including compilers, debuggers, and flashing utilities.
+
+---
+
+## QEMU Installation
+
+```bash
+sudo apt update
+sudo apt install -y qemu-system-x86
+```
+
+> **Explanation**: Installs QEMU, a powerful emulator and virtualizer for x86 systems, useful for testing and running virtual machines or emulating different architectures.
 
 ---
 
