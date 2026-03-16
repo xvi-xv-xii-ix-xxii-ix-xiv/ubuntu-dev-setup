@@ -45,6 +45,7 @@ Designed for software engineers, system programmers, and hobbyists starting with
 32. [Embedded RE -- UART, Logic Analyzer, Firmware](#32-embedded-re----uart-logic-analyzer-firmware)
 33. [JTAG and SWD Scanning](#33-jtag-and-swd-scanning)
 34. [Safe Analysis Environments](#34-safe-analysis-environments)
+35. [Universal .gitignore](#35-universal-gitignore)
 
 ---
 
@@ -2081,6 +2082,698 @@ qemu-mipsel ./mips_binary
 qemu-arm-static -g 1234 ./arm_binary
 gdb-multiarch ./arm_binary -ex "target remote :1234"
 ```
+
+---
+
+## 35. Global .gitignore
+
+Git supports three levels of ignore rules:
+
+- **Project-level** -- `.gitignore` committed inside the repository. Shared with all
+  contributors. Use for build artefacts and files specific to the project's language
+  or framework.
+- **Global** -- a single file on your machine that applies to every repository you work
+  in, regardless of project. Use for OS noise, editor files, and personal tooling that
+  other contributors should not have to care about.
+- **Local** -- `.git/info/exclude` inside a specific repository. Never committed. Use for
+  personal experiments or files you cannot add to either of the above.
+
+The global file is the right place for everything in this guide: OS thumbnails, IDE
+directories, dotenv files, reverse engineering artefacts, and embedded toolchain output.
+
+---
+
+### File location
+
+The conventional path is `~/.config/git/ignore`. Git reads this automatically on any
+platform without any extra configuration if the file exists at that path.
+
+```
+~/.config/git/ignore      <-- preferred, no config required
+~/.gitignore_global       <-- also common, requires one git config line
+```
+
+Either location works. The `~/.config/git/` path is preferred because it follows the
+XDG Base Directory specification and keeps all Git configuration in one place.
+
+---
+
+### Installation
+
+**Option A -- XDG path (recommended, zero configuration)**
+
+```bash
+mkdir -p ~/.config/git
+curl -fsSL https://raw.githubusercontent.com/github/gitignore/main/Global/Linux.gitignore \
+  > ~/.config/git/ignore
+
+# Then append the full listing below to the same file:
+cat >> ~/.config/git/ignore << 'GITIGNORE'
+# ... paste contents here ...
+GITIGNORE
+```
+
+**Option B -- custom path with explicit git config**
+
+```bash
+# Create the file
+touch ~/.gitignore_global
+
+# Tell Git where to find it -- this writes to ~/.gitconfig
+git config --global core.excludesfile ~/.gitignore_global
+
+# Verify it was registered
+git config --global core.excludesfile
+# Output: /home/youruser/.gitignore_global
+```
+
+---
+
+### Verify it is active
+
+```bash
+# Show which gitignore rules apply to a file in any repository
+git check-ignore -v somefile
+
+# List all active ignore sources for the current repo
+git config --list --show-origin | grep excludes
+
+# Test that a file would be ignored before committing
+cd ~/some-repo
+git check-ignore -v .DS_Store
+git check-ignore -v target/
+git check-ignore -v .env
+```
+
+---
+
+### Relationship to project .gitignore
+
+The global file and the project `.gitignore` are additive -- both apply at the same time.
+The recommended split:
+
+| Goes in global `~/.config/git/ignore` | Goes in project `.gitignore` |
+|---|---|
+| OS noise (`.DS_Store`, `Thumbs.db`) | Build output specific to this project |
+| Editor directories (`.idea/`, `.vscode/`) | `dist/`, `build/`, `*.o` |
+| Virtual environments (`.venv/`, `venv/`) | Language-specific cache (`__pycache__/`) |
+| Secrets and keys (`*.pem`, `.env`) | Test fixtures, generated mocks |
+| RE tools (`.pcap`, `_*.extracted/`) | Project log files |
+
+Never put secrets or credentials in a project `.gitignore` -- that file is committed and
+visible to anyone who clones the repository. Global rules are machine-local and never
+exposed.
+
+---
+
+### Full listing
+
+```gitignore
+# =============================================================================
+# OPERATING SYSTEMS
+# =============================================================================
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+
+# =============================================================================
+# EDITORS AND IDES
+# =============================================================================
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.history/
+*.vsix
+
+# JetBrains (CLion, RustRover, PyCharm, IntelliJ IDEA, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# Vim / Neovim
+[._]*.s[a-v][a-z]
+!*.svg
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+tags
+[._]*.un~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+.org-id-locations
+*_archive
+*_flymake.*
+/eshell/history
+/eshell/lastdir
+/elpa/
+*.rel
+/auto/
+.cask/
+dist/
+flycheck_*.el
+/server/
+.projectile
+.dir-locals.el
+/network-security.data
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+local.properties
+.settings/
+.loadpath
+.recommenders
+.target
+.classpath
+.project
+.buildpath
+.externalToolBuilders/
+*.launch
+*.pydevproject
+.cproject
+.autotools
+.factorypath
+.texlipse
+*.prefs
+
+
+# =============================================================================
+# C / C++
+# =============================================================================
+
+# Prerequisites
+*.d
+
+# Compiled object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Compiled dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+build/
+cmake-build-*/
+
+# Autotools
+Makefile.in
+/autom4te.cache
+/aclocal.m4
+/compile
+/configure
+/depcomp
+/install-sh
+/missing
+/stamp-h1
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
+
+# Ninja
+.ninja_deps
+.ninja_log
+
+# Clang tools
+.clang-tidy
+.clangd/
+.cache/clangd/
+
+
+# =============================================================================
+# RUST
+# =============================================================================
+
+debug/
+target/
+Cargo.lock        # Keep for binaries; remove this line for libraries
+**/*.rs.bk
+*.pdb
+
+# cargo-embed / probe-rs
+.embed.toml
+
+
+# =============================================================================
+# PYTHON
+# =============================================================================
+
+# Byte-compiled / optimised / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version         # Keep if using pyenv local; remove to commit it
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+profile_default/
+ipython_config.py
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# pyenv
+# .python-version       # Uncomment to ignore pyenv version pins globally
+
+# uv
+.uv/
+uv.lock               # Keep for applications; remove this line for libraries
+
+
+# =============================================================================
+# GO
+# =============================================================================
+
+*.exe
+*.exe~
+*.test
+*.out
+go.work
+go.work.sum
+vendor/
+
+
+# =============================================================================
+# NODE.JS / JAVASCRIPT / TYPESCRIPT
+# =============================================================================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+.npm
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+.node_repl_history
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+dist/
+build/
+
+
+# =============================================================================
+# RUST / WEBASSEMBLY (Leptos, Trunk, wasm-pack)
+# =============================================================================
+
+pkg/
+wasm-pack.log
+dist/
+.trunk/
+
+
+# =============================================================================
+# EMBEDDED / MICROCONTROLLER
+# =============================================================================
+
+# Build artefacts
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+*.axf
+
+# OpenOCD
+openocd.log
+
+# STM32CubeIDE / CubeMX
+STM32CubeIDE/
+*.ioc.bak
+Debug/
+Release/
+
+# Keil MDK
+*.uvoptx
+*.uvguix
+*.dep
+*.bak
+*.sfr
+Listings/
+Objects/
+
+# IAR
+*.ewt
+settings/
+
+# probe-rs
+.probe-rs/
+
+# cargo-embed
+rtt.log
+
+
+# =============================================================================
+# DOCKER
+# =============================================================================
+
+.docker/
+docker-compose.override.yml
+.dockerignore         # Do not ignore -- this file should be committed
+
+
+# =============================================================================
+# DATABASES
+# =============================================================================
+
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+*.sql.gz
+dump.rdb
+postgres-data/
+pgdata/
+
+
+# =============================================================================
+# ENVIRONMENT AND SECRETS
+# =============================================================================
+
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
+.secrets/
+credentials/
+config/local.yml
+config/local.toml
+config/local.json
+
+
+# =============================================================================
+# LOGS AND TEMPORARY FILES
+# =============================================================================
+
+*.log
+*.log.*
+logs/
+log/
+*.tmp
+*.temp
+*.swp
+*.swo
+.cache/
+tmp/
+temp/
+
+
+# =============================================================================
+# ARCHIVES AND BINARIES
+# =============================================================================
+
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.tar.bz2
+*.tar.xz
+*.gz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.iso
+*.dmg
+*.img
+
+
+# =============================================================================
+# REVERSE ENGINEERING AND SECURITY TOOLS
+# =============================================================================
+
+# Ghidra project files
+*.gpr
+*.rep/
+ghidra_scripts/
+
+# radare2 / rizin
+*.r2
+.r2history
+
+# pwntools core dumps
+core
+core.*
+
+# Frida
+__pycache__/
+frida-agent/
+
+# mitmproxy
+.mitmproxy/
+*.mitm
+*.mitm.gz
+
+# Wireshark / tcpdump captures
+*.pcap
+*.pcapng
+*.cap
+
+# Binwalk extraction artefacts
+_*.extracted/
+_*.binwalk
+
+# strace / ltrace output
+strace.log
+ltrace.log
+
+# Analysis working directories (adjust to taste)
+analysis/
+samples/
+malware/
+firmware_extracted/
+
+
+# =============================================================================
+# MISCELLANEOUS
+# =============================================================================
+
+# Backup files
+*.orig
+*.rej
+*.bak
+*.backup
+
+# Patch files
+*.patch
+*.diff
+
+# Coverage and profiling
+*.profraw
+*.profdata
+perf.data
+perf.data.old
+flamegraph.svg
+
+# Generated documentation
+docs/_build/
+site/
+_site/
+.jekyll-cache/
+
+# Dependency directories (various package managers)
+.vendor/
+vendor/
+bower_components/
+
+# Editor project directories
+nbproject/
+.project/
+```
+
+---
+
+### One-shot install
+
+Copy the listing above into your global ignore file:
+
+```bash
+# Creates ~/.config/git/ignore and writes the full listing into it
+mkdir -p ~/.config/git
+
+cat > ~/.config/git/ignore << 'GITIGNORE'
+# paste the full listing here
+GITIGNORE
+```
+
+After saving, the rules are active immediately for all repositories on the machine.
+No `git config` command is needed when using the `~/.config/git/ignore` path.
 
 ---
 
