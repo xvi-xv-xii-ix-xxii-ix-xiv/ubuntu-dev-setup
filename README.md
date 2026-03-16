@@ -37,6 +37,14 @@ Designed for software engineers, system programmers, and hobbyists starting with
 24. [Firewall: nftables](#24-firewall-nftables)
 25. [SSH Configuration](#25-ssh-configuration)
 26. [SSH Key Generation](#26-ssh-key-generation)
+27. [Reverse Engineering -- Disassemblers and Decompilers](#27-reverse-engineering----disassemblers-and-decompilers)
+28. [Dynamic Analysis -- GDB Extensions, Frida, Tracing](#28-dynamic-analysis----gdb-extensions-frida-tracing)
+29. [Binary Analysis -- Tooling and Workflow](#29-binary-analysis----tooling-and-workflow)
+30. [Network Analysis and Traffic Interception](#30-network-analysis-and-traffic-interception)
+31. [System Profiling -- perf, eBPF, bpftrace](#31-system-profiling----perf-ebpf-bpftrace)
+32. [Embedded RE -- UART, Logic Analyzer, Firmware](#32-embedded-re----uart-logic-analyzer-firmware)
+33. [JTAG and SWD Scanning](#33-jtag-and-swd-scanning)
+34. [Safe Analysis Environments](#34-safe-analysis-environments)
 
 ---
 
@@ -1228,6 +1236,851 @@ cat ~/.ssh/id_ed25519.pub
 
 Ed25519 is preferred over RSA: smaller keys, faster operations, equivalent security.
 For legacy systems requiring RSA: `ssh-keygen -t rsa -b 4096`.
+
+---
+
+## 27. Reverse Engineering -- Disassemblers and Decompilers
+
+### Ghidra
+
+Ghidra is a free, open-source software reverse engineering framework developed by the NSA.
+It supports x86, ARM, MIPS, PowerPC, and many other architectures, and includes a
+decompiler that produces readable C-like pseudocode.
+
+```bash
+# Prerequisites: Java 17+
+sudo apt install -y openjdk-17-jdk
+
+# Download the latest release from https://github.com/NationalSecurityAgency/ghidra/releases
+wget https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.1.2_build/ghidra_11.1.2_PUBLIC_20240709.zip
+unzip ghidra_11.1.2_PUBLIC_20240709.zip -d ~/tools/
+rm ghidra_11.1.2_PUBLIC_20240709.zip
+
+# Create a launcher script
+echo '#!/bin/bash\n~/tools/ghidra_11.1.2_PUBLIC/ghidraRun "$@"' > ~/.local/bin/ghidra
+chmod +x ~/.local/bin/ghidra
+```
+
+Always verify the release filename and hash on the GitHub releases page before downloading.
+Ghidra updates frequently -- check for new versions regularly.
+
+**Useful Ghidra shortcuts**
+
+```
+G          Go to address
+L          Rename symbol at cursor
+;          Add a comment
+Ctrl+L     Search for label / symbol
+Ctrl+F     Search text in listing
+Ctrl+Shift+E  Export program (C headers, ELF, etc.)
+F5         Toggle decompiler / listing sync
+```
+
+---
+
+### Radare2 and Cutter
+
+Radare2 is a portable reverse engineering framework with a powerful command-line interface.
+Cutter is its official Qt-based GUI.
+
+```bash
+# Radare2 -- install from the official script for the latest version
+git clone https://github.com/radareorg/radare2.git ~/tools/radare2
+cd ~/tools/radare2
+sys/install.sh
+
+# Verify
+r2 -v
+
+# Cutter (GUI)
+# Download the AppImage from https://github.com/rizinorg/cutter/releases
+wget -O ~/tools/cutter.AppImage \
+  https://github.com/rizinorg/cutter/releases/latest/download/Cutter-v2.3.4-Linux-x86_64.AppImage
+chmod +x ~/tools/cutter.AppImage
+~/tools/cutter.AppImage
+
+# rizin -- maintained fork of radare2, used by Cutter internally
+sudo apt install -y rizin
+```
+
+**Essential r2 commands**
+
+```
+r2 -d ./binary          Open binary under debugger
+r2 -A ./binary          Open and run full analysis (aaa)
+aaa                     Analyze all (functions, xrefs, strings)
+afl                     List all functions
+pdf @ main              Disassemble function 'main'
+pd 20 @ 0x08048400      Disassemble 20 instructions at address
+iz                      List strings in data sections
+ii                      List imports
+axt @ sym.func          Find cross-references to a function
+V                       Visual mode (use p/P to cycle views)
+Vp                      Visual panel mode (graph, disasm, hexdump)
+```
+
+---
+
+### Binary Ninja (Free Tier)
+
+Binary Ninja offers a free cloud-based tier and a free personal license for non-commercial use.
+The desktop version provides an excellent decompiler and a Python/Rust scripting API.
+
+Download from: https://binary.ninja/free/
+
+```bash
+# After downloading the .zip, extract and run
+unzip binaryninja_free_linux.zip -d ~/tools/binaryninja
+~/tools/binaryninja/binaryninja
+```
+
+---
+
+## 28. Dynamic Analysis -- GDB Extensions, Frida, Tracing
+
+### pwndbg -- Enhanced GDB
+
+pwndbg is a GDB plugin that replaces the stock interface with structured, coloured output --
+stack traces, heap visualization, register context, and exploit development helpers.
+
+```bash
+git clone https://github.com/pwndbg/pwndbg.git ~/tools/pwndbg
+cd ~/tools/pwndbg
+./setup.sh
+
+# pwndbg loads automatically for all GDB sessions after setup
+gdb ./binary
+```
+
+**Key pwndbg commands**
+
+```
+context          Display registers, stack, code, backtrace in one view
+heap             Show glibc heap chunks
+bins             Show tcache / fastbins / smallbins
+got              Show the Global Offset Table
+plt              Show PLT entries
+checksec         Display binary security mitigations
+vmmap            Show process memory map with permissions
+search -s "hello"  Search memory for a string
+telescope 0xaddr 20  Dereference a chain of pointers
+cyclic 100       Generate a de Bruijn sequence (for offset finding)
+cyclic -l 0x6161616b  Find offset of a pattern in the sequence
+```
+
+---
+
+### GEF -- GDB Enhanced Features (alternative to pwndbg)
+
+GEF is another GDB enhancement with a focus on exploit development and CTF work.
+Install only one of pwndbg or GEF to avoid conflicts.
+
+```bash
+bash -c "$(curl -fsSL https://gef.blah.cat/sh)"
+```
+
+---
+
+### Frida -- Dynamic Instrumentation
+
+Frida lets you inject JavaScript (or Python) into running processes on Linux, Android,
+iOS, Windows, and macOS. It is the standard tool for black-box function hooking and
+API tracing without source code.
+
+```bash
+pip3 install --user frida-tools frida
+
+# Verify
+frida --version
+frida-ps -l    # List running processes (local)
+```
+
+**Basic usage**
+
+```bash
+# Trace all calls to open() and read() in a running process
+frida-trace -i "open" -i "read" -p <PID>
+
+# Trace by process name
+frida-trace -i "malloc" -n firefox
+
+# Start a process under Frida and drop into a REPL
+frida ./binary
+
+# Run a JavaScript hook script against a process
+frida -p <PID> -l hook.js
+```
+
+**Example hook script (`hook.js`)**
+
+```javascript
+// Intercept calls to the 'strcmp' function in libc
+const strcmp = Module.getExportByName("libc.so.6", "strcmp");
+
+Interceptor.attach(strcmp, {
+    onEnter(args) {
+        console.log("[strcmp]", args[0].readUtf8String(), "vs", args[1].readUtf8String());
+    },
+    onLeave(retval) {
+        console.log("  => returned", retval.toInt32());
+    }
+});
+```
+
+---
+
+### strace and ltrace
+
+```bash
+sudo apt install -y strace ltrace
+
+# Trace all system calls made by a process
+strace ./binary
+
+# Trace only specific syscalls
+strace -e trace=open,read,write,mmap ./binary
+
+# Attach to a running process by PID
+strace -p <PID>
+
+# Trace with timestamps and output to file
+strace -tt -o strace.log ./binary
+
+# Trace library function calls (not syscalls)
+ltrace ./binary
+
+# Trace only calls to libc
+ltrace -l libc.so.6 ./binary
+```
+
+---
+
+## 29. Binary Analysis -- Tooling and Workflow
+
+### binutils Workflow
+
+The GNU binutils suite provides low-level inspection of ELF binaries and object files.
+
+```bash
+# Show file type and architecture
+file binary
+
+# List all printable strings (min length 8)
+strings -n 8 binary
+strings -e l binary   # 16-bit little-endian strings (for PE/firmware)
+
+# Display all section headers
+readelf -S binary
+
+# Display symbol table
+readelf -s binary
+
+# Display dynamic dependencies
+readelf -d binary | grep NEEDED
+ldd binary            # Alternative: shows resolved library paths
+
+# Disassemble a specific section
+objdump -d -j .text binary
+
+# Disassemble with source interleaving (if debug info present)
+objdump -dS binary
+
+# Show relocation entries
+objdump -r binary
+
+# Hexdump a binary or specific offset range
+xxd binary | head -40
+xxd -s 0x1000 -l 256 binary
+```
+
+---
+
+### checksec -- Security Mitigation Audit
+
+```bash
+pip3 install --user checksec.py
+
+# Audit a single binary
+checksec --file=./binary
+
+# Audit all binaries in a directory
+checksec --dir=/usr/bin
+```
+
+Output includes: NX (non-executable stack), PIE (position-independent), RELRO, stack canary,
+FORTIFY, RPATH. Understanding which mitigations are absent is the first step in exploit
+development.
+
+---
+
+### pwntools -- Exploit Development Framework
+
+pwntools is a Python library for writing binary exploits. It handles process interaction,
+ROP chain construction, ELF parsing, shellcode generation, and remote socket communication.
+
+```bash
+pip3 install --user pwntools
+```
+
+**Typical exploit script skeleton**
+
+```python
+from pwn import *
+
+# Connect to a local binary, a remote service, or a GDB session
+# p = process("./vuln")
+# p = remote("ctf.example.com", 4444)
+p = gdb.debug("./vuln", gdbscript="break main\ncontinue")
+
+elf = ELF("./vuln")
+libc = ELF("/lib/x86_64-linux-gnu/libc.so.6")
+
+log.info(f"Binary base: {hex(elf.address)}")
+log.info(f"main() at:   {hex(elf.symbols['main'])}")
+
+# Build a ROP chain
+rop = ROP(elf)
+rop.call(elf.plt["puts"], [elf.got["puts"]])
+rop.call(elf.symbols["main"])
+
+payload = flat({
+    0x48: rop.chain()   # Overflow offset: 0x48 bytes to return address
+})
+
+p.sendlineafter(b"Input: ", payload)
+leak = u64(p.recvline().strip().ljust(8, b"\x00"))
+log.success(f"Leaked puts@libc: {hex(leak)}")
+
+libc.address = leak - libc.symbols["puts"]
+log.success(f"libc base: {hex(libc.address)}")
+
+p.interactive()
+```
+
+---
+
+### one_gadget -- One-Shot RCE Gadget Finder
+
+```bash
+sudo apt install -y ruby
+gem install one_gadget
+
+one_gadget /lib/x86_64-linux-gnu/libc.so.6
+```
+
+Finds `execve("/bin/sh", NULL, NULL)` gadgets in libc that can be called with a single
+return address overwrite, provided certain register constraints are met at the call site.
+
+---
+
+### ROPgadget and ropper
+
+```bash
+pip3 install --user ROPgadget
+
+# Find all gadgets in a binary
+ROPgadget --binary ./binary
+
+# Find specific gadget patterns
+ROPgadget --binary ./binary --rop
+ROPgadget --binary /lib/x86_64-linux-gnu/libc.so.6 --string "/bin/sh"
+
+# ropper -- alternative with a more detailed interface
+pip3 install --user ropper
+ropper -f ./binary
+```
+
+---
+
+## 30. Network Analysis and Traffic Interception
+
+### mitmproxy
+
+mitmproxy is an interactive TLS-capable proxy with a terminal UI, a web UI, and a Python
+scripting API. It is the primary tool for intercepting and modifying HTTP/S traffic.
+
+```bash
+sudo apt install -y mitmproxy
+
+# Start the terminal UI (intercepts on port 8080 by default)
+mitmproxy
+
+# Start the web UI
+mitmweb
+
+# Headless mode -- log all traffic to a file
+mitmdump -w capture.mitm
+
+# Replay a recorded capture against a target
+mitmdump -n -r capture.mitm
+
+# Run a Python addon script
+mitmproxy -s script.py
+```
+
+**Configure a client to use the proxy**
+
+```bash
+export http_proxy=http://127.0.0.1:8080
+export https_proxy=http://127.0.0.1:8080
+
+# Install the mitmproxy CA certificate (required for TLS interception)
+# Start mitmproxy once, then:
+sudo cp ~/.mitmproxy/mitmproxy-ca-cert.pem /usr/local/share/ca-certificates/mitmproxy.crt
+sudo update-ca-certificates
+```
+
+---
+
+### Burp Suite Community Edition
+
+Burp Suite is the standard tool for web application security testing. The Community Edition
+is free and covers manual testing, proxy interception, Repeater, and Intruder (rate-limited).
+
+```bash
+# Download the Linux installer from https://portswigger.net/burp/communitydownload
+wget -O /tmp/burpsuite_installer.sh \
+  "https://portswigger.net/burp/releases/download?product=community&type=Linux"
+chmod +x /tmp/burpsuite_installer.sh
+/tmp/burpsuite_installer.sh
+```
+
+---
+
+### Scapy -- Packet Crafting and Analysis
+
+Scapy is a Python library for crafting, sending, sniffing, and dissecting network packets
+at any layer. It is more flexible than Wireshark for custom protocol work.
+
+```bash
+pip3 install --user scapy
+```
+
+**Examples**
+
+```python
+from scapy.all import *
+
+# Craft and send a custom ICMP packet
+send(IP(dst="192.168.1.1") / ICMP())
+
+# TCP SYN scan on a single host
+ans, _ = sr(IP(dst="192.168.1.1") / TCP(dport=[22, 80, 443], flags="S"), timeout=2)
+ans.summary()
+
+# Sniff 20 packets on eth0 matching a BPF filter
+pkts = sniff(iface="eth0", filter="tcp port 80", count=20)
+pkts.show()
+
+# Parse a saved pcap file
+pkts = rdpcap("capture.pcap")
+for pkt in pkts:
+    if pkt.haslayer(Raw):
+        print(pkt[Raw].load)
+```
+
+---
+
+### Custom Protocol Fuzzing with Boofuzz
+
+```bash
+pip3 install --user boofuzz
+```
+
+Boofuzz is a network protocol fuzzer -- a successor to Sulley. It sends malformed data
+to network services and monitors for crashes or unexpected behaviour.
+
+---
+
+## 31. System Profiling -- perf, eBPF, bpftrace
+
+### perf
+
+`perf` is the Linux kernel's built-in performance analysis tool. It can profile CPU cycles,
+cache misses, branch mispredictions, and trace kernel and userspace events.
+
+```bash
+sudo apt install -y linux-tools-common linux-tools-$(uname -r)
+
+# CPU profiling -- sample call stacks at 99 Hz for 10 seconds
+sudo perf record -F 99 -g -p <PID>
+sudo perf report
+
+# Count hardware events for a command
+sudo perf stat -e cycles,instructions,cache-misses ./binary
+
+# Record and annotate a specific function
+sudo perf record -e cycles:u -g ./binary
+sudo perf annotate --stdio
+
+# Live top-like view of hottest functions
+sudo perf top
+```
+
+**Flame graphs from perf data**
+
+```bash
+git clone https://github.com/brendangregg/FlameGraph ~/tools/FlameGraph
+
+sudo perf record -F 99 -g -p <PID> -- sleep 10
+sudo perf script | ~/tools/FlameGraph/stackcollapse-perf.pl \
+  | ~/tools/FlameGraph/flamegraph.pl > flamegraph.svg
+xdg-open flamegraph.svg
+```
+
+---
+
+### eBPF and bpftrace
+
+bpftrace is a high-level tracing language for the Linux kernel's eBPF subsystem.
+It lets you write one-liner probes for syscalls, kernel functions, and userspace symbols
+without writing kernel modules.
+
+```bash
+sudo apt install -y bpftrace bpfcc-tools linux-headers-$(uname -r)
+
+# Trace all execve() calls system-wide
+sudo bpftrace -e 'tracepoint:syscalls:sys_enter_execve { printf("%s %s\n", comm, str(args->filename)); }'
+
+# Count syscalls by process name
+sudo bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
+
+# Latency histogram for read() syscalls
+sudo bpftrace -e '
+  tracepoint:syscalls:sys_enter_read { @start[tid] = nsecs; }
+  tracepoint:syscalls:sys_exit_read  /@start[tid]/
+  { @ns = hist(nsecs - @start[tid]); delete(@start[tid]); }'
+
+# Trace calls to a specific userspace function (requires debug symbols or DWARF)
+sudo bpftrace -e 'uprobe:/usr/bin/python3:PyEval_EvalFrameEx { @[ustack] = count(); }'
+```
+
+**bcc-tools one-liners**
+
+```bash
+# Trace all open() calls
+sudo opensnoop
+
+# Show new processes as they start
+sudo execsnoop
+
+# Trace block I/O latency
+sudo biolatency
+
+# Trace TCP connections
+sudo tcptracer
+```
+
+---
+
+### SystemTap (advanced kernel tracing)
+
+```bash
+sudo apt install -y systemtap systemtap-sdt-dev
+
+# Check if stap works (requires kernel debug info)
+stap -e 'probe kernel.function("sys_open") { log(execname() . " opened file") }'
+```
+
+---
+
+## 32. Embedded RE -- UART, Logic Analyzer, Firmware
+
+### Serial Communication -- minicom and picocom
+
+UART is the most common debug interface on embedded hardware. These tools provide terminal
+access over a serial port.
+
+```bash
+sudo apt install -y minicom picocom
+
+# List available serial ports
+ls /dev/ttyUSB* /dev/ttyACM*
+
+# Connect at 115200 baud (most common for UART debug consoles)
+picocom -b 115200 /dev/ttyUSB0
+
+# minicom -- more configurable, supports xmodem file transfer
+sudo minicom -s        # Enter setup mode
+minicom -b 115200 -D /dev/ttyUSB0
+```
+
+picocom is lighter and better for quick sessions. minicom is preferable when you need
+file transfers (XMODEM, YMODEM) to upload firmware over a serial bootloader.
+
+**Common baud rates:** 9600, 38400, 57600, 115200, 921600
+
+---
+
+### Logic Analyzer -- sigrok and PulseView
+
+sigrok is an open-source signal analysis software stack. PulseView is its Qt GUI.
+Together they support a wide range of cheap USB logic analyzers (Saleae clones, cx3688, etc.)
+as well as oscilloscopes.
+
+```bash
+sudo apt install -y sigrok sigrok-firmware-fx2lafw pulseview
+
+# Allow current user to access USB devices without sudo
+sudo usermod -aG plugdev $USER
+```
+
+PulseView can decode SPI, I2C, UART, 1-Wire, CAN, USB, I2S, and many other protocols
+on captured waveforms. Combined with a $5 clone logic analyzer, it replaces expensive
+dedicated hardware for most embedded RE tasks.
+
+---
+
+### Firmware Analysis -- binwalk
+
+binwalk is a firmware extraction and analysis tool. It identifies embedded file systems,
+compressed archives, bootloaders, and other structures within flat binary blobs.
+
+```bash
+# Install from pip for the latest version
+pip3 install --user binwalk
+
+# System dependencies for extraction support
+sudo apt install -y \
+  squashfs-tools zlib1g-dev liblzma-dev \
+  mtd-utils gzip bzip2 tar arj lhasa p7zip \
+  cabextract cramfsswap
+
+# Analyse a firmware image -- identify known signatures
+binwalk firmware.bin
+
+# Extract all identified components
+binwalk -e firmware.bin          # Extracts to _firmware.bin.extracted/
+
+# Recursive extraction (extract archives within archives)
+binwalk -Me firmware.bin
+
+# Entropy analysis -- high entropy regions indicate encryption or compression
+binwalk -E firmware.bin
+
+# Search for specific strings or byte sequences
+binwalk -R "\x7fELF" firmware.bin
+```
+
+**Typical workflow**
+
+```bash
+# 1. Identify what the firmware contains
+binwalk firmware.bin
+
+# 2. Extract and inspect the file system
+binwalk -e firmware.bin
+cd _firmware.bin.extracted/
+ls -la
+
+# 3. Look for credentials, private keys, hardcoded endpoints
+grep -r "password" . 2>/dev/null
+grep -r "BEGIN.*KEY" . 2>/dev/null
+find . -name "*.conf" -o -name "*.cfg" | xargs grep -l "pass"
+
+# 4. Identify ELF binaries for further analysis in Ghidra or radare2
+find . -exec file {} \; | grep ELF
+```
+
+---
+
+### USB Traffic Analysis
+
+```bash
+# Load the usbmon kernel module to capture USB traffic
+sudo modprobe usbmon
+
+# List USB buses
+ls /dev/usbmon*
+
+# Capture USB traffic with Wireshark (select the usbmon interface)
+sudo wireshark
+
+# Or capture with tcpdump and open in Wireshark later
+sudo tcpdump -i usbmon0 -w usb_capture.pcap
+```
+
+---
+
+## 33. JTAG and SWD Scanning
+
+JTAG and SWD are hardware debug interfaces present on most microcontrollers. When
+undocumented, their pins must be located through scanning techniques.
+
+### pyOCD -- Python CMSIS-DAP / SWD Debugger
+
+pyOCD is a Python-based debugger for Cortex-M devices. It is an alternative to OpenOCD
+with better Python scripting support and automatic target detection.
+
+```bash
+pip3 install --user pyocd
+
+# List connected probes
+pyocd list
+
+# Flash a binary
+pyocd flash -t stm32f411ce firmware.bin
+
+# Start a GDB server
+pyocd gdbserver -t stm32f411ce
+
+# Open an interactive target shell
+pyocd commander -t stm32f411ce
+```
+
+**pyOCD commander commands**
+
+```
+> read32 0x08000000 16    Read 16 words from flash base
+> write32 0x20000000 0xdeadbeef   Write a value to SRAM
+> reset                   Reset the target
+> halt                    Halt the CPU
+> reg                     Show CPU registers
+```
+
+---
+
+### JTAG Boundary Scan -- openFPGALoader and UrJTAG
+
+```bash
+# UrJTAG -- universal JTAG tool, useful for boundary scan and pin discovery
+sudo apt install -y urjtag
+
+jtag
+> cable ft2232 vid=0x0403 pid=0x6010   # Connect via FTDI adapter
+> detect                                 # Probe the JTAG chain
+> print chain                            # Print detected devices
+```
+
+---
+
+### JTAGulator Equivalent Workflow with Arduino
+
+When JTAG/UART pins are unknown, the typical workflow is:
+
+1. Connect a logic analyzer (sigrok/PulseView) and probe candidate test points at reset.
+2. Look for UART activity at common baud rates (output from bootloader).
+3. For JTAG: try UrJTAG or OpenOCD with brute-force pin permutations using a script.
+4. Confirm JTAG with a known-good target register read.
+
+**Brute-force JTAG pin finder using OpenOCD**
+
+```tcl
+# openocd_jtag_scan.tcl -- iterate through GPIO pin combinations
+# Run with: openocd -f interface/raspberrypi-gpio.cfg -f openocd_jtag_scan.tcl
+foreach tdo_pin $tdo_candidates {
+    foreach tdi_pin $tdi_candidates {
+        foreach tck_pin $tck_candidates {
+            foreach tms_pin $tms_candidates {
+                # Set transport pins and attempt IDCODE read
+                # A successful read confirms the correct combination
+            }
+        }
+    }
+}
+```
+
+---
+
+## 34. Safe Analysis Environments
+
+Analysing unknown binaries, firmware, or malware on a production machine carries risk.
+The following approaches provide progressively stronger isolation.
+
+### Docker-based Sandbox
+
+A Docker container provides filesystem and process isolation sufficient for most RE work.
+
+```bash
+# Pull a pre-built RE environment
+docker pull remnux/remnux-distro
+
+# Run with access to a local work directory only
+docker run -it --rm \
+  --network none \
+  -v ~/re-workdir:/work \
+  remnux/remnux-distro bash
+
+# Inside the container: run radare2, binwalk, strings, etc.
+```
+
+`--network none` prevents the container from making outbound connections, which is important
+if analysing potentially active malware.
+
+---
+
+### Firejail -- Lightweight Process Sandboxing
+
+Firejail uses Linux namespaces and seccomp to sandbox individual applications without
+virtualization overhead. Suitable for running untrusted GUI tools or scripts.
+
+```bash
+sudo apt install -y firejail firejail-profiles
+
+# Run an application with default sandboxing
+firejail ./suspicious_binary
+
+# Block network access entirely
+firejail --net=none ./binary
+
+# Whitelist only a specific directory for file access
+firejail --whitelist=/tmp/analysis ./binary
+
+# Sandbox with a private /home and /tmp
+firejail --private --private-tmp ./binary
+
+# View active sandboxes
+firejail --list
+```
+
+---
+
+### QEMU Full-System Emulation for Firmware RE
+
+For analysing firmware that targets a specific CPU architecture (ARM, MIPS, PowerPC),
+QEMU full-system emulation provides a complete virtual machine.
+
+```bash
+sudo apt install -y \
+  qemu-system-arm qemu-system-mips qemu-system-ppc \
+  qemu-user qemu-user-static
+
+# Run a single ARM ELF binary directly (userspace emulation -- no full VM needed)
+qemu-arm-static ./arm_binary
+
+# Make ARM binaries executable transparently via binfmt_misc
+sudo apt install -y binfmt-support
+update-binfmts --enable qemu-arm
+
+# ARM Linux full-system emulation (requires kernel + rootfs images)
+qemu-system-arm \
+  -M virt \
+  -cpu cortex-a15 \
+  -m 512M \
+  -kernel vmlinuz-arm \
+  -initrd rootfs.img \
+  -append "console=ttyAMA0" \
+  -nographic
+
+# MIPS full-system (common in router firmware)
+qemu-system-mips \
+  -M malta \
+  -kernel vmlinux-mips \
+  -initrd rootfs.img \
+  -nographic
+```
+
+**qemu-user for quick cross-architecture binary testing**
+
+```bash
+# Run a MIPS ELF on an x86 host using userspace emulation
+sudo apt install -y gcc-mipsel-linux-gnu
+qemu-mipsel ./mips_binary
+
+# Attach GDB to a userspace-emulated binary
+qemu-arm-static -g 1234 ./arm_binary
+gdb-multiarch ./arm_binary -ex "target remote :1234"
+```
 
 ---
 
